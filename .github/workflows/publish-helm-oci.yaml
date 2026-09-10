@@ -3,7 +3,7 @@ name: publish-helm-oci
 on:
   push:
     tags:
-      - "v*+glyphs.*"
+      - 'v*\+glyphs.*'
 
 permissions:
   contents: read
