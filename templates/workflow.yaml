@@ -1,0 +1,27 @@
+{{/*Runik Platform
+Copyright (C) 2023 namenmalkv@gmail.com
+SPDX-License-Identifier: AGPL-3.0-only
+*/}}
+
+{{- $bookTarot := dict -}}
+{{- if and .Values.spellbook .Values.spellbook.tarot -}}
+  {{- $bookTarot = .Values.spellbook.tarot -}}
+{{- end -}}
+{{- $chapterTarot := dict -}}
+{{- if and .Values.chapter .Values.chapter.tarot -}}
+  {{- $chapterTarot = .Values.chapter.tarot -}}
+{{- end -}}
+{{- if or .Values.tarot $bookTarot.defaultReading $chapterTarot.defaultReading }}
+{{- $effectiveTarot := include "tarot.v2.effectiveConfig" . | fromJson -}}
+{{- $_ := set .Values "tarot" $effectiveTarot -}}
+{{- $hasReading := or $effectiveTarot.defaultReading $effectiveTarot.reading -}}
+{{- if $hasReading }}
+  {{- if and $effectiveTarot.reading $effectiveTarot.reading.selector }}
+    {{- include "tarot.v2.renderSelectedReading" (list . $effectiveTarot) }}
+  {{- else }}
+    {{- include "tarot.v2.renderWorkflow" (list . $effectiveTarot) }}
+  {{- end }}
+{{- else }}
+  {{- fail "Tarot v2 requires reading or an inherited defaultReading" }}
+{{- end }}
+{{- end }}

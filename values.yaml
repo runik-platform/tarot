@@ -1,0 +1,56 @@
+# Tarot Trinket Default Values
+# Dynamic workflow composition system
+
+# Spell-owned Tarot invocation. Librarian supplies this key unchanged.
+tarot: {}
+
+# Chart defaults are kept outside the invocation so they remain lower
+# precedence than spellbook.tarot, chapter.tarot and the spell's tarot block.
+tarotDefaults:
+  executionMode: dag
+  ttlStrategy:
+    secondsAfterSuccess: 86400
+    secondsAfterFailure: 604800
+  podGC:
+    strategy: OnWorkflowCompletion
+    deleteDelayDuration: 30m
+  serviceAccount:
+    enabled: true
+    name: tarot-runner
+    labels: {}
+    annotations: {}
+  rbac:
+    enabled: true
+  secrets: {}
+  volumes: {}
+  configMaps: {}
+  labels: {}
+  annotations: {}
+
+# Book/Chapter system integration (for runic indexer and vault glyph)
+spellbook:
+  name: tarot
+
+chapter:
+  name: default
+
+# Lexicon system integration (for cluster templates and vault servers)
+lexicon: {}
+  # Example vault server configuration:
+  # default-vault:
+  #   type: secret-store
+  #   provider: operator
+  #   labels:
+  #     default: book
+  #   url: http://vault.vault.svc.cluster.local:8200
+  #   namespace: vault
+  #   secretPath: secret
+  #   authPath: kubernetes
+  # Will be populated from bookrack appendix.lexicon via librarian
+
+# Service Account configuration (used by summon glyph)
+serviceAccount:
+  enabled: true
+  name: tarot-runner
+  labels: {}
+  annotations: {}

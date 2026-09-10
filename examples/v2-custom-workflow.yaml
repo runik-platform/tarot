@@ -1,0 +1,23 @@
+tarot:
+  with:
+    message: hello
+  reading:
+    inputs:
+      parameters:
+        message:
+          required: true
+    cards:
+      prepare:
+        container:
+          image: alpine:3.22
+          command: [sh, -c]
+          args: ["echo {{inputs.parameters.message}}"]
+        contract:
+          inputs:
+            parameters: [message]
+        with:
+          message: "{{workflow.parameters.message}}"
+      approve:
+        depends: [prepare]
+        suspend:
+          duration: 30s

@@ -1,0 +1,55 @@
+tarot:
+  secrets:
+    execution-token:
+      contentType: env
+      content:
+        TOKEN: example
+
+  configMaps:
+    execution-settings:
+      contentType: env
+      content:
+        MODE: validation
+
+  cards:
+    inspect:
+      contract:
+        inputs:
+          secrets: [execution-token]
+      script:
+        image: alpine:3.22
+        command: [sh]
+        source: |
+          test -n "$TOKEN"
+        env:
+          - name: TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: execution-token
+                key: TOKEN
+
+    approval:
+      suspend:
+        duration: 30s
+
+    record:
+      resource:
+        action: create
+        manifest: |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            generateName: tarot-result-
+          data:
+            status: complete
+
+  reading:
+    cards:
+      inspect:
+        uses: inspect
+      approve:
+        uses: approval
+        depends: [inspect]
+      record:
+        uses: record
+        depends: [approve]

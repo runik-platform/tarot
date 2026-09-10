@@ -1,0 +1,101 @@
+name: publish-helm-oci
+
+on:
+  push:
+    tags:
+      - "v*+glyphs.*"
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: helm-oci-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish vendored Helm chart
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the tagged public release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install Helm
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="${RUNNER_TEMP}/helm-v3.20.2-linux-amd64.tar.gz"
+          curl --fail --location --silent --show-error \
+            --output "${archive}" \
+            https://get.helm.sh/helm-v3.20.2-linux-amd64.tar.gz
+          echo "258e830a9e613c8a7a302d6059b4bb3b9758f2f3e1bb8ea0d707ce10a9a72fea  ${archive}" | \
+            sha256sum --check --strict
+          tar -xzf "${archive}" -C "${RUNNER_TEMP}"
+          mkdir -p "${RUNNER_TEMP}/bin"
+          mv "${RUNNER_TEMP}/linux-amd64/helm" "${RUNNER_TEMP}/bin/helm"
+          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+
+      - name: Package and publish
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          chart_name="${GITHUB_REPOSITORY#*/}"
+          version="${RELEASE_TAG#v}"
+          base_version="$(sed -n 's/^version:[[:space:]]*//p' Chart.yaml | head -n1 | tr -d '"')"
+          base_version="${base_version%%+*}"
+
+          if [[ ! "${version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?\+glyphs\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Unsupported release tag: ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+          if [[ "${version}" != "${base_version}+glyphs."* ]]; then
+            echo "Tag ${RELEASE_TAG} does not match Chart.yaml ${base_version}" >&2
+            exit 1
+          fi
+
+          package_dir="$(mktemp -d)"
+          helm package . --version "${version}" --destination "${package_dir}" >/dev/null
+          package_file="${package_dir}/${chart_name}-${version}.tgz"
+          test -f "${package_file}"
+
+          tar -tzf "${package_file}" > "${package_dir}/files.txt"
+          grep -Fxq "${chart_name}/charts/runic-system/Chart.yaml" "${package_dir}/files.txt"
+          if grep -Eq '(^|/)[.]git(modules)?(/|$)' "${package_dir}/files.txt"; then
+            echo "Packaged chart contains Git metadata" >&2
+            exit 1
+          fi
+
+          printf '%s' "${GHCR_TOKEN}" | helm registry login ghcr.io \
+            --username "${GITHUB_ACTOR}" --password-stdin
+
+          reference="oci://ghcr.io/${GITHUB_REPOSITORY_OWNER}/${chart_name}"
+          existing_dir="$(mktemp -d)"
+          if helm pull "${reference}" --version "${version}"             --destination "${existing_dir}" >/dev/null 2>&1; then
+            existing_file="$(find "${existing_dir}" -maxdepth 1 -type f \
+              -name '*.tgz' | head -n1)"
+            test -n "${existing_file}"
+            package_tree="$(mktemp -d)"
+            existing_tree="$(mktemp -d)"
+            tar -xzf "${package_file}" -C "${package_tree}"
+            tar -xzf "${existing_file}" -C "${existing_tree}"
+            if ! diff -qr "${package_tree}/${chart_name}" \
+              "${existing_tree}/${chart_name}" >/dev/null; then
+              echo "Immutable OCI version collision: ${reference} ${version}" >&2
+              exit 1
+            fi
+            echo "OCI chart already published: ${reference} ${version}"
+            exit 0
+          fi
+
+          helm push "${package_file}" \
+            "oci://ghcr.io/${GITHUB_REPOSITORY_OWNER}"

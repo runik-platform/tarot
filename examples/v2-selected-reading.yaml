@@ -1,0 +1,24 @@
+lexicon:
+  organization-ci:
+    name: organization-ci
+    type: tarot-reading
+    labels:
+      process: ci
+      profile: standard
+      version: v1
+    scope: cluster
+    template: main
+    contract:
+      inputs:
+        parameters:
+          repository: {required: true}
+          revision: {default: upstream}
+
+tarot:
+  reading:
+    selector:
+      process: ci
+      profile: standard
+      version: v1
+  with:
+    repository: ssh://git@example/apps/invoices.git

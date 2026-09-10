@@ -1,0 +1,32 @@
+name: retention-exit
+
+tarot:
+  ttlStrategy:
+    secondsAfterSuccess: 3600
+    secondsAfterFailure: 86400
+  podGC:
+    strategy: OnWorkflowCompletion
+    deleteDelayDuration: 10m
+
+  cards:
+    report-status:
+      contract:
+        inputs:
+          parameters:
+            status: {required: true}
+      container:
+        image: alpine:3.22
+        command: [sh, -c]
+        args: ['echo "workflow finished: {{inputs.parameters.status}}"']
+
+  reading:
+    onExit:
+      uses: report-status
+      with:
+        status: "{{workflow.status}}"
+    cards:
+      execute:
+        container:
+          image: alpine:3.22
+          command: [sh, -c]
+          args: ["echo process"]

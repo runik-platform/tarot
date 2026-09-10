@@ -1,0 +1,33 @@
+tarot:
+  executionMode: containerSet
+  volumes:
+    workspace:
+      type: emptyDir
+      size: 1Gi
+  cards:
+    prepare-workspace:
+      container:
+        image: alpine:3.22
+        command: [sh, -c]
+        args: ["echo source > /workspace/source"]
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+    build-image:
+      container:
+        image: alpine:3.22
+        command: [sh, -c]
+        args: ["test -f /workspace/source"]
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+  reading:
+    retryStrategy:
+      limit: "2"
+    timeout: 600
+    cards:
+      prepare:
+        uses: prepare-workspace
+      build:
+        uses: build-image
+        depends: [prepare]

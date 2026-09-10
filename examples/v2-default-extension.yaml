@@ -1,0 +1,89 @@
+spellbook:
+  name: example
+  tarot:
+    defaultReading:
+      inputs:
+        parameters:
+          repository:
+            required: true
+          revision:
+            required: true
+          image:
+            required: true
+      cards:
+        checkout:
+          uses: git-checkout
+          with:
+            repository: "{{workflow.parameters.repository}}"
+            revision: "{{workflow.parameters.revision}}"
+        test:
+          uses: test
+          depends: [checkout]
+        build:
+          uses: image-build
+          depends: [test]
+          with:
+            image: "{{workflow.parameters.image}}"
+      extensionPoints:
+        after-test:
+          after: [test]
+          before: [build]
+    cards:
+      git-checkout:
+        ref:
+          kind: ClusterWorkflowTemplate
+          name: ci-cards
+          template: git-checkout
+        contract:
+          inputs:
+            parameters: [repository, revision]
+          outputs:
+            artifacts: [source]
+      test:
+        ref:
+          kind: ClusterWorkflowTemplate
+          name: ci-cards
+          template: test
+        contract:
+          inputs:
+            artifacts: [source]
+          outputs:
+            artifacts: [source]
+      image-build:
+        ref:
+          kind: ClusterWorkflowTemplate
+          name: ci-cards
+          template: image-build
+        contract:
+          inputs:
+            parameters: [image]
+            artifacts: [source]
+
+chapter:
+  name: services
+  tarot:
+    cards:
+      security-scan:
+        ref:
+          kind: ClusterWorkflowTemplate
+          name: security-cards
+          template: scan
+        contract:
+          inputs:
+            parameters: [policy]
+            artifacts: [source]
+          outputs:
+            artifacts: [source]
+
+tarot:
+  with:
+    repository: ssh://git@example/apps/invoices.git
+    revision: upstream
+    image: registry.example/invoices
+  extend:
+    after-test:
+      cards:
+        security-scan:
+          uses: security-scan
+          with:
+            policy: strict

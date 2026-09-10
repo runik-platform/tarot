@@ -1,0 +1,27 @@
+tarot:
+  cards:
+    greet:
+      contract:
+        inputs:
+          parameters:
+            message: {required: true}
+      container:
+        image: alpine:3.22
+        command: [sh, -c]
+        args: ["echo {{inputs.parameters.message}}"]
+      retryStrategy:
+        limit: "2"
+      timeout: 300
+
+  with:
+    message: hello
+
+  reading:
+    inputs:
+      parameters:
+        message: {required: true}
+    cards:
+      hello:
+        uses: greet
+        with:
+          message: "{{workflow.parameters.message}}"
