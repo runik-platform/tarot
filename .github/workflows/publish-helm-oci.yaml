@@ -3,10 +3,10 @@ name: publish-helm-oci
 on:
   push:
     tags:
-      - 'v*\+glyphs.*'
+      - "v*"
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 concurrency:
@@ -51,15 +51,19 @@ jobs:
 
           chart_name="${GITHUB_REPOSITORY#*/}"
           version="${RELEASE_TAG#v}"
-          base_version="$(sed -n 's/^version:[[:space:]]*//p' Chart.yaml | head -n1 | tr -d '"')"
-          base_version="${base_version%%+*}"
+          declared_name="$(sed -n 's/^name:[[:space:]]*//p' Chart.yaml | head -n1 | tr -d '"')"
+          declared_version="$(sed -n 's/^version:[[:space:]]*//p' Chart.yaml | head -n1 | tr -d '"')"
 
-          if [[ ! "${version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?\+glyphs\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+          if [[ ! "${version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
             echo "Unsupported release tag: ${RELEASE_TAG}" >&2
             exit 1
           fi
-          if [[ "${version}" != "${base_version}+glyphs."* ]]; then
-            echo "Tag ${RELEASE_TAG} does not match Chart.yaml ${base_version}" >&2
+          if [[ "${declared_name}" != "${chart_name}" ]]; then
+            echo "Repository ${chart_name} does not match Chart.yaml name ${declared_name}" >&2
+            exit 1
+          fi
+          if [[ "${version}" != "${declared_version}" ]]; then
+            echo "Tag ${RELEASE_TAG} does not match Chart.yaml ${declared_version}" >&2
             exit 1
           fi
 
@@ -80,7 +84,8 @@ jobs:
 
           reference="oci://ghcr.io/${GITHUB_REPOSITORY_OWNER}/${chart_name}"
           existing_dir="$(mktemp -d)"
-          if helm pull "${reference}" --version "${version}"             --destination "${existing_dir}" >/dev/null 2>&1; then
+          if helm pull "${reference}" --version "${version}" \
+            --destination "${existing_dir}" >/dev/null 2>&1; then
             existing_file="$(find "${existing_dir}" -maxdepth 1 -type f \
               -name '*.tgz' | head -n1)"
             test -n "${existing_file}"
@@ -99,3 +104,25 @@ jobs:
 
           helm push "${package_file}" \
             "oci://ghcr.io/${GITHUB_REPOSITORY_OWNER}"
+
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "GitHub release already exists: ${RELEASE_TAG}"
+            exit 0
+          fi
+
+          release_args=()
+          if [[ "${RELEASE_TAG#v}" == *-* ]]; then
+            release_args+=(--prerelease)
+          fi
+          gh release create "${RELEASE_TAG}" \
+            --verify-tag \
+            --title "${RELEASE_TAG}" \
+            --generate-notes \
+            "${release_args[@]}"

@@ -51,6 +51,28 @@ A card resolves to exactly one implementation:
 
 Reusable cards may declare `contract.inputs` and `contract.outputs`. The supported contract groups are `parameters`, `artifacts`, and `secrets`. Workflow resources such as secrets, ConfigMaps, and volumes belong under `tarot`, not inside individual cards.
 
+## Workflow synchronization
+
+Tarot passes `tarot.synchronization` through as the native Argo
+`WorkflowSpec.synchronization` block for both composed and selected readings.
+It follows the ordinary Tarot precedence and applies to the complete workflow,
+not to an individual card.
+
+Use a local mutex when multiple readings mutate the same external state:
+
+```yaml
+tarot:
+  synchronization:
+    mutexes:
+      - name: runik-maintenance
+```
+
+Workflows using the same mutex name must render in the same namespace. Argo
+queues them and releases the mutex when the workflow finishes; no lock
+ConfigMap, acquisition card, cleanup card, or lock-specific RBAC is required.
+The field intentionally preserves Argo's native shape so semaphores and future
+synchronization options do not require a second Tarot-specific contract.
+
 ## Retention and lifecycle
 
 Tarot applies workflow retention policy at the invocation level. Both fields

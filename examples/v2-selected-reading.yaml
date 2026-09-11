@@ -15,6 +15,9 @@ lexicon:
           revision: {default: upstream}
 
 tarot:
+  synchronization:
+    mutexes:
+      - name: organization-ci
   reading:
     selector:
       process: ci

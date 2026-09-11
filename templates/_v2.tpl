@@ -711,6 +711,9 @@ arguments:
 {{- if $workflowParameters -}}
   {{- $_ := set $spec "arguments" (dict "parameters" $workflowParameters) -}}
 {{- end -}}
+{{- with $effective.synchronization -}}
+  {{- $_ := set $spec "synchronization" (deepCopy .) -}}
+{{- end -}}
 {{- with $effective.ttlStrategy -}}
   {{- $_ := set $spec "ttlStrategy" (deepCopy .) -}}
 {{- end -}}
@@ -764,6 +767,10 @@ arguments:
       value: {{ $definition.value | quote }}
       {{- end }}
   {{- end }}
+{{- end }}
+{{- with $effective.synchronization }}
+synchronization:
+  {{- . | toYaml | nindent 2 }}
 {{- end }}
 {{- with $effective.ttlStrategy }}
 ttlStrategy:

@@ -8,6 +8,9 @@ tarot: {}
 # precedence than spellbook.tarot, chapter.tarot and the spell's tarot block.
 tarotDefaults:
   executionMode: dag
+  # Native Argo WorkflowSpec synchronization. Local mutexes need no
+  # ConfigMap; workflows sharing a name and namespace execute serially.
+  synchronization: {}
   ttlStrategy:
     secondsAfterSuccess: 86400
     secondsAfterFailure: 604800

@@ -1,6 +1,9 @@
 name: retention-exit
 
 tarot:
+  synchronization:
+    mutexes:
+      - name: retention-maintenance
   ttlStrategy:
     secondsAfterSuccess: 3600
     secondsAfterFailure: 86400
