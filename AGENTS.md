@@ -1,6 +1,6 @@
-# CLAUDE.md — tarot
+# AGENTS.md — tarot
 
-Shared Runik concepts live in the [root guide](../../../CLAUDE.md). This file documents only Tarot's workflow-composition contract.
+Shared Runik concepts live in the [root guide](../../../AGENTS.md). This file documents only Tarot's workflow-composition contract.
 
 ## Responsibility
 
@@ -248,3 +248,17 @@ The generic `workflow.template` glyph supplies the WorkflowTemplate resource env
 ## Testing
 
 The files under `examples/v2-*.yaml` cover reusable and inline cards, selected readings, default extension, executable kinds, and both execution modes. Render them through the repository Make targets.
+
+## Development and publication
+
+Forgejo `runik/tarot` is the source of truth. Develop from `origin/upstream`,
+push a topic branch to Forgejo, and merge a reviewed PR into `upstream`; never
+develop on or push directly to the generated GitHub repo. Every upstream merge
+automatically triggers Runik component synchronization.
+
+For a release, first merge the intended version in `Chart.yaml`, then publish a
+Forgejo Release at the current `upstream` head with the exact tag
+`v<Chart.yaml.version>`. A raw tag push does not publish. Tarot's publication
+reading creates the clean GitHub snapshot and tag; the repository's GitHub
+Action creates the Release plus the self-contained OCI chart at
+`oci://ghcr.io/runik-platform/tarot`.
