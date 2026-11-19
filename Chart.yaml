@@ -1,6 +1,6 @@
 apiVersion: v2
 name: tarot
-version: 0.5.1
+version: 0.5.2
 description: Dynamic workflow composition system using mystical card-based architecture
 home: https://github.com/runik-platform
 sources:

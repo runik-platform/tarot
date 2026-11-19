@@ -258,7 +258,7 @@ automatically triggers Runik component synchronization.
 
 For a release, first merge the intended version in `Chart.yaml`, then publish a
 Forgejo Release at the current `upstream` head with the exact tag
-`v<Chart.yaml.version>`. A raw tag push does not publish. Tarot's publication
-reading creates the clean GitHub snapshot and tag; the repository's GitHub
+`v<Chart.yaml.version>`. A raw tag push does not publish. The repository publication
+Workflow creates the clean GitHub snapshot and tag; the repository's GitHub
 Action creates the Release plus the self-contained OCI chart at
 `oci://ghcr.io/runik-platform/tarot`.
